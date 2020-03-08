@@ -25,31 +25,31 @@ class GraphSIR(torch.nn.Module):
         """
         super().__init__()
 
-        self.N = intra_k.shape[0]          # number of nodes
-        self.intra_b = Parameter(intra_b)  # b: infection probability within the city
-        self.intra_k = Parameter(intra_k)  # k: healing probability within the city
+        self.N = intra_k.shape[0]        # number of nodes
+        self.intra_b = Parameter(intra_b.to(device))  # b: infection probability within the city
+        self.intra_k = Parameter(intra_k.to(device))  # k: healing probability within the city
         self.inter_adj = inter_adj.to(device) # adjacency matrix among all the cities in the models 
         self.inter_b = Parameter(inter_b)     # inter_b: infection coupling among different cities 
-        self.device = device                  # what device to use, "cpu" as default 
+        self.device = device                 # what device to use, "cpu" as default 
         
     def forward(self, t, s):
 
-        dsdt = torch.zeros(self.N, 3)
+        dsdt = torch.zeros(self.N, 3).to(self.device)
         
         # infected from i to j 
-        i_2_j = self.inter_b * s[self.inter_adj[:,0], 1] 
+        i_2_j = self.inter_b.abs() * s[self.inter_adj[:,0], 1] 
         di_inter = scatter_add(i_2_j, self.inter_adj[:,1], dim_size=self.N) - scatter_add(i_2_j, self.inter_adj[:,0], dim_size=self.N)
         
-        j_2_i = self.inter_b * s[self.inter_adj[:,1], 1] 
+        j_2_i = self.inter_b.abs() * s[self.inter_adj[:,1], 1] 
         di_inter += scatter_add(j_2_i, self.inter_adj[:,0], dim_size=self.N) - scatter_add(j_2_i, self.inter_adj[:,1], dim_size=self.N)
 
         # update the inter-city dependence 
         dsdt[:, 1] += di_inter
 
         # Intra city development 
-        ds_intra = -s[:, 0] * s[:, 1] * self.intra_b
-        di_intra = s[:, 0] * s[:, 1] * self.intra_b  - s[:, 1] * self.intra_k 
-        dr_intra = s[:, 1] * self.intra_k
+        ds_intra = -s[:, 0] * s[:, 1] * self.intra_b.abs()
+        di_intra = s[:, 0] * s[:, 1] * self.intra_b.abs()  - s[:, 1] * self.intra_k.abs() 
+        dr_intra = s[:, 1] * self.intra_k.abs()
 
         # update the intra city dependence 
         dsdt[:, 0] += ds_intra
