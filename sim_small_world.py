@@ -17,7 +17,7 @@ def compute_phase(N, m, p):
     sim_data = []
 
     for i, (t, r) in enumerate(param_mesh):
-        G_list = [ small_world(N, m, p) for i in range(10) ]
+        G_list = [nx.watts_strogatz_graph(N, m, p) for i in range(10) ]
         S_log, I_log, R_log = ensmeble(G_list, 10, t, r, 300)
         percolated_nodes = I_log + R_log
         sim_outcome = [t, r, percolated_nodes.mean(0), percolated_nodes.std(0)]
